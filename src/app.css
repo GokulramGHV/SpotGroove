@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Sen:wght@400;700;800&display=swap');
+
+@tailwind utilities;
+@tailwind components;
+@tailwind base;
+
+body {
+  font-family: 'Sen', sans-serif;
+}
+
+.font-kaushan {
+  font-family: 'Kaushan Script', cursive;
+}
+
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+.dots {
+  @apply text-ellipsis overflow-hidden whitespace-nowrap;
+}
