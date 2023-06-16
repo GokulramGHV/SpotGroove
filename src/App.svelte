@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { API_URL } from '../constants.js';
   import SongDetails from './SongDetails.svelte';
   let searchTerm = '';
@@ -122,6 +123,7 @@
       on:keypress={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
+          e.target.blur();
           handleGoClick();
         }
       }}
