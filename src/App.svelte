@@ -1,12 +1,16 @@
 <script>
-  const API_URL = 'https://spotgroove-backend.gokulramghv.repl.co';
-  let url = '';
+  import { API_URL } from '../constants.js';
+  import SongDetails from './SongDetails.svelte';
+  let searchTerm = '';
   let goBtnLoading = false;
-  let downloadBtnLoading = false;
   let downloadFinished = false;
   let songDetails = {};
-  async function handleGoClick() {
-    goBtnLoading = true;
+  let songs = [];
+  let offset = 0;
+  let next;
+  let prev;
+
+  async function getSongDetails(url) {
     const res = await fetch(`${API_URL}/songDetails`, {
       headers: {
         Accept: 'application/json',
@@ -24,37 +28,56 @@
       alert("Couldn't find the song! Check URL and try again!");
       throw new Error(text);
     }
-    goBtnLoading = false;
   }
 
-  async function downloadSong() {
-    downloadBtnLoading = true;
-    const res = await fetch(`${API_URL}/download`, {
+  async function handlePrev() {
+    if (offset === 0) return;
+    offset -= 5;
+    prev = getSongs(searchTerm, offset);
+  }
+
+  async function handleNext() {
+    offset += 5;
+    next = getSongs(searchTerm, offset);
+  }
+
+  async function getSongs(name, offset = 0) {
+    const res = await fetch(`${API_URL}/searchTrack?search=${encodeURI(name)}&offset=${offset}`, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      method: 'POST',
-      body: JSON.stringify({ spotifyUrl: url }),
+      method: 'GET',
     });
+    const text = await res.text();
     if (res.ok) {
-      const blob = await res.blob();
-      let blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${songDetails.name}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      downloadFinished = true;
+      songs = JSON.parse(text);
+      console.log('Songs: ', songs);
     } else {
-      throw new Error('Not able to download the song!');
+      goBtnLoading = false;
+      alert("Couldn't find the song! Check URL and try again!");
+      throw new Error(text);
     }
-    downloadBtnLoading = false;
+  }
+
+  async function handleGoClick() {
+    goBtnLoading = true;
+    songDetails = {};
+    songs = [];
+
+    // check if searchTerm is a spotify song URL
+    if (searchTerm.includes('open.spotify.com')) {
+      await getSongDetails(searchTerm);
+    } else {
+      await getSongs(searchTerm);
+    }
+
+    goBtnLoading = false;
+    downloadFinished = false; // reset downloadFinished
   }
 </script>
 
-<main class="w-full h-screen flex flex-col justify-center items-center bg-[#121212] px-10">
+<main class="w-full min-h-screen flex flex-col justify-center items-center bg-[#121212] px-6 py-10">
   <div class="relative">
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +105,7 @@
     <h1 class="font-kaushan text-4xl text-white ml-14">SpotGroove</h1>
   </div>
 
-  <div class="relative flex gap-2 mt-10">
+  <div class="relative flex gap-2 mt-10 w-full sm:w-fit">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="16"
@@ -103,9 +126,9 @@
         }
       }}
       type="text"
-      bind:value={url}
+      bind:value={searchTerm}
       class="px-[51px] py-4 w-full sm:w-[500px] rounded-lg bg-[#242424] shadow-lg text-white focus:shadow-[#1ed760]/20 focus:ring-[#1ed760] focus:ring-2 focus:outline-none transition duration-200 ease-in"
-      placeholder="What's the song's URL?"
+      placeholder="Search or enter a song's URL"
     />
     <button
       disabled={goBtnLoading}
@@ -130,62 +153,25 @@
       {/if}
     </button>
   </div>
-
-  {#if Object.keys(songDetails).length !== 0}
-    <div class="flex sm:flex-row flex-col w-full justify-center items-center mt-10 gap-4">
-      <img src={songDetails.cover_url} alt="Song Cover" class="rounded-lg w-28 h-28" />
-      <div class="text-white h-full flex flex-col justify-center text-center sm:text-left">
-        <p class="text-2xl font-bold dots max-w-[15rem] sm:max-w-[20rem]">{songDetails.name}</p>
-        <div class="flex gap-2 items-center mt-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-5 h-5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-            />
-          </svg>
-          <p class="text-lg dots max-w-[15rem] sm:max-w-[20rem]">{songDetails.artists.join(', ')}</p>
-        </div>
-
-        <div class="flex gap-2 items-center mt-1">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="currentColor"
-            class="bi bi-vinyl text-white w-5 h-5"
-            viewBox="0 0 16 16"
-          >
-            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-            <path d="M8 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM4 8a4 4 0 1 1 8 0 4 4 0 0 1-8 0z" />
-            <path d="M9 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0z" />
-          </svg>
-          <p class="text-lg dots max-w-[15rem] sm:max-w-[20rem]">{songDetails.album_name}</p>
-        </div>
-      </div>
-    </div>
-    <div class="mt-10">
-      {#if downloadBtnLoading}
-        <div class="text-white flex flex-col justify-center items-center">
-          <p>We're preparing your song, please wait...</p>
-          <p>This might take upto a minute! Don't close your browser!</p>
-          <div class="animate-spin rounded-full h-7 w-7 border-b-[3px] border-green-500 mt-2" />
-        </div>
-      {:else if downloadFinished}
-        <p class="text-white font-bold">Download Finished!</p>
-      {:else}
+  {#if songs.length > 0}
+    <div class="grid gap-3 dots mt-10">
+      {#each songs as song, i (song.spotifyUrl.split('/').pop())}
         <button
-          on:click={downloadSong}
-          class="px-5 py-3 rounded-lg text-[#121212] font-bold bg-[#1ed760] hover:bg-green-300 flex justify-center items-center gap-2"
-          ><svg
+          class="flex w-full items-center justify-between gap-4 px-4 py-2 hover:bg-[#444444] rounded-lg"
+          on:click={() => {
+            songDetails = song;
+            songs = [];
+          }}
+        >
+          <img src={song.cover_url} alt="Song Cover" class="rounded-md w-10 h-10" />
+          <div class="text-white h-full flex flex-col justify-center text-left">
+            <p class="text-lg font-bold dots sm:w-[400px] w-[200px]">{song.name}</p>
+            <p class="text-sm dots sm:w-[400px] w-[200px]">{song.artists.join(', ')}</p>
+          </div>
+          <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="currentColor"
-            class="bi bi-download w-4 h-4"
+            class="bi bi-download w-4 h-4 text-white"
             viewBox="0 0 16 16"
           >
             <path
@@ -194,13 +180,34 @@
             <path
               d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"
             />
-          </svg>Download</button
+          </svg>
+        </button>
+      {/each}
+
+      <div class="mx-auto flex gap-4 mt-2">
+        <button
+          class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg flex justify-center items-center gap-2"
+          on:click={handlePrev}
         >
-      {/if}
+          {#await prev}
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-black" />
+          {/await} Prev
+        </button>
+        <button
+          class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg flex justify-center items-center gap-2"
+          on:click={handleNext}
+        >
+          Next {#await next}
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-black" />
+          {/await}
+        </button>
+      </div>
     </div>
   {/if}
-  <div class="relative top-10 text-gray-300 font-bold">
-    🎧 Made by <a href="https://github.com/GokulramGHV" class="text-blue-500 hover:underline hover:underline-offset-2"
+  <SongDetails bind:downloadFinished url={searchTerm} {songDetails} />
+
+  <div class="relative mt-10 text-gray-300 font-semibold">
+    🎧 Made by <a href="https://github.com/GokulramGHV" class="text-green-500 hover:underline hover:underline-offset-2"
       >@GokulramGHV
     </a>🎶
   </div>
