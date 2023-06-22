@@ -5,6 +5,7 @@
   let downloadBtnLoading = false;
   export let downloadFinished = false;
   let downloadTime = 0.0; // in seconds
+  let modalOpen = false;
 
   async function downloadSong() {
     let startTime = Date.now();
@@ -86,7 +87,10 @@
       </p>
     {:else}
       <button
-        on:click={downloadSong}
+        on:click={() => {
+          if (localStorage.getItem('agree') === 'true') downloadSong();
+          else modalOpen = true;
+        }}
         class="px-5 py-3 rounded-lg text-[#121212] font-bold bg-[#1ed760] hover:bg-green-300 flex justify-center items-center gap-2"
         ><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-download w-4 h-4" viewBox="0 0 16 16">
           <path
@@ -95,8 +99,66 @@
           <path
             d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"
           />
-        </svg>Download</button
-      >
+        </svg>
+        Download
+      </button>
     {/if}
+  </div>
+
+  <div
+    class="absolute top-0 left-0 w-full min-h-screen backdrop-blur-md z-40 flex justify-center items-center delay-75 ease-in-out px-5"
+    class:scale-0={!modalOpen}
+  >
+    <div class="z-50 bg-white rounded-lg p-5 sm:w-[500px] w-full shadow-xl">
+      <h3 class="text-2xl font-bold mb-2">Before you procced...</h3>
+      <div class="h-[250px] overflow-y-auto mb-4">
+        <p>
+          This web app doesn't download songs from spotify, instead it uses the spotify api to get the song's meta data
+          and using that meta data it searches for the song on youtube and downloads the song from youtube. This app
+          uses the following packages:
+          <a
+            href="https://www.npmjs.com/package/spotifydl-core"
+            class="text-green-500 font-semibold hover:underline whitespace-nowrap"
+            target="_blank"
+          >
+            spotifydl-core
+          </a>
+          &
+          <a
+            href="https://github.com/fent/node-ytdl-core"
+            class="text-green-500 font-semibold hover:underline whitespace-nowrap"
+            target="_blank"
+          >
+            ytdl-core
+          </a>
+          <br />
+          <br />
+          By using this web app, you agree to the following terms: You must not use copyrighted music obtained through this
+          web app for commercial purposes or engage in copyright infringement. This web app is made for educational and experimental
+          purposes only, and do not guarantee the accuracy or completeness of the content. You are responsible for complying
+          with applicable laws and copyrights.
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <button
+          class="px-5 py-2 rounded-lg text-[#121212] font-bold bg-green-500 hover:bg-green-400"
+          on:click={() => {
+            modalOpen = false;
+            localStorage.setItem('agree', 'true');
+            downloadSong();
+          }}
+        >
+          Agree
+        </button>
+        <button
+          class="px-5 py-2 rounded-lg text-[#121212] font-bold bg-gray-200 hover:bg-gray-300"
+          on:click={() => {
+            modalOpen = false;
+          }}
+        >
+          Disagree
+        </button>
+      </div>
+    </div>
   </div>
 {/if}
